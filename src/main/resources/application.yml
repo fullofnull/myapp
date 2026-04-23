@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: demo
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus, health, info  # 이 부분이 문을 여는 열쇠입니다!
+  metrics:
+    tags:
+      application: myapp  # Grafana에서 데이터를 찾기 쉽게 이름을 붙여줍니다.
