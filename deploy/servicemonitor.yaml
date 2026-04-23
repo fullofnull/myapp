@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: myapp-monitor
+  namespace: monitoring    # 프로메테우스가 설치된 네임스페이스
+  labels:
+    release: kube-prometheus-stack # 설치하신 Helm 리리스 명칭 (확인 필요)
+spec:
+  selector:
+    matchLabels:
+      app: myapp           # 위 서비스의 labels와 일치해야 함
+  namespaceSelector:
+    matchNames:
+      - myapp              # 서비스가 있는 네임스페이스
+  endpoints:
+  - port: http-metrics     # 위 서비스의 ports.name과 일치해야 함
+    path: /actuator/prometheus
+    interval: 15s
