@@ -22,7 +22,7 @@ spec:
       containers:
       - name: myapp
         image: 192.168.241.101:30002/base/spring-app:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - containerPort: 8080
         resources:
