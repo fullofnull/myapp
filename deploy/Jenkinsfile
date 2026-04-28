@@ -1,0 +1,15 @@
+stage('Image Build & Push') {
+  steps {
+    container('kaniko') {
+      sh """
+        /kaniko/executor \\
+          --context=dir://\${WORKSPACE} \\
+          --dockerfile=\${WORKSPACE}/deploy/Dockerfile \\
+          --destination=\${HARBOR_URL}/\${IMAGE_NAME}:\${BUILD_NUMBER} \\
+          --destination=\${HARBOR_URL}/\${IMAGE_NAME}:latest \\
+          --insecure \\
+          --skip-tls-verify
+      """
+    }
+  }
+}
