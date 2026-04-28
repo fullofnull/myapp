@@ -88,3 +88,17 @@ pipeline {
               git push https://\${GIT_USER}:\${GIT_TOKEN}@github.com/fullofnull/myapp.git HEAD:main
             """
           }
+        }
+      }
+    }
+  }
+
+  post {
+    success {
+      echo "빌드 성공: \${IMAGE_NAME}:\${BUILD_NUMBER}"
+    }
+    failure {
+      echo "빌드 실패"
+    }
+  }
+}
