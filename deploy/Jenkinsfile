@@ -28,6 +28,8 @@ spec:
     volumeMounts:
     - name: harbor-creds
       mountPath: /kaniko/.docker
+    - name: workspace-volume
+      mountPath: /home/jenkins/agent
   volumes:
   - name: harbor-creds
     secret:
@@ -35,12 +37,15 @@ spec:
       items:
       - key: .dockerconfigjson
         path: config.json
+  - name: workspace-volume
+    emptyDir: {}
 """
     }
   }
 
   environment {
-    HARBOR_URL = '192.168.241.101:30002'
+    // 중요: Kaniko의 사설 IP 체크 우회를 위해 도메인 이름을 사용합니다.
+    HARBOR_URL = 'my-harbor.local:30002'
     IMAGE_NAME = 'base/spring-app'
   }
 
@@ -60,21 +65,23 @@ spec:
     }
 
     stage('Image Build & Push') {
-        steps {
-            container('kaniko') {
-                    sh """
-                    /kaniko/executor \
-                    --context=dir://${WORKSPACE} \
-                    --dockerfile=${WORKSPACE}/deploy/Dockerfile \
-                    --destination=${HARBOR_URL}/${IMAGE_NAME}:${BUILD_NUMBER} \
-                    --destination=${HARBOR_URL}/${IMAGE_NAME}:latest \
-                    --insecure \
-                    --insecure-registry=my-harbor.local:30002 \
-                    --skip-tls-verify
-                    """
-                }
-            }
+      steps {
+        container('kaniko') {
+          // GODEBUG 변수는 네트워크 라이브러리의 엄격한 체크를 완화하는 데 도움을 줍니다.
+          withEnv(['GODEBUG=http2client=0']) {
+            sh """
+            /kaniko/executor \
+            --context=dir://${WORKSPACE} \
+            --dockerfile=${WORKSPACE}/deploy/Dockerfile \
+            --destination=${HARBOR_URL}/${IMAGE_NAME}:${BUILD_NUMBER} \
+            --destination=${HARBOR_URL}/${IMAGE_NAME}:latest \
+            --insecure \
+            --insecure-registry=${HARBOR_URL} \
+            --skip-tls-verify
+            """
+          }
         }
+      }
     }
 
     stage('Update Manifest') {
@@ -88,7 +95,8 @@ spec:
             sh """
               git config user.email "jenkins@ci.local"
               git config user.name "Jenkins"
-              sed -i 's|image: ${HARBOR_URL}/${IMAGE_NAME}:.*|image: ${HARBOR_URL}/${IMAGE_NAME}:${BUILD_NUMBER}|' deploy/deployment.yaml
+              # 매니페스트 업데이트 시에도 HARBOR_URL 변수를 그대로 활용합니다.
+              sed -i 's|image: .*/${IMAGE_NAME}:.*|image: ${HARBOR_URL}/${IMAGE_NAME}:${BUILD_NUMBER}|' deploy/deployment.yaml
               git add deploy/deployment.yaml
               git commit -m "ci: update image tag to ${BUILD_NUMBER}"
               git push https://${GIT_USER}:${GIT_TOKEN}@github.com/fullofnull/myapp.git HEAD:main
@@ -101,7 +109,7 @@ spec:
 
   post {
     success {
-      echo "빌드 성공: ${IMAGE_NAME}:${BUILD_NUMBER}"
+      echo "빌드 및 푸시 성공: ${HARBOR_URL}/${IMAGE_NAME}:${BUILD_NUMBER}"
     }
     failure {
       echo "빌드 실패"
