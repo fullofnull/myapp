@@ -56,20 +56,23 @@ spec:
     }
 
     stage('Image Build & Push') {
-      steps {
-        container('kaniko') {
-          sh """
-            /kaniko/executor \
-              --context=dir://${WORKSPACE} \
-              --dockerfile=${WORKSPACE}/deploy/Dockerfile \
-              --destination=${HARBOR_URL}/${IMAGE_NAME}:${BUILD_NUMBER} \
-              --destination=${HARBOR_URL}/${IMAGE_NAME}:latest \
-              --insecure \
-              --insecure-registry=${HARBOR_URL} \
-              --skip-tls-verify
-          """
+        steps {
+            container('kaniko') {
+                // GODEBUG 변수를 통해 HTTP/2나 특정 네트워크 체크 우회를 시도합니다.
+                withEnv(['GODEBUG=http2client=0']) { 
+                    sh """
+                    /kaniko/executor \
+                    --context=dir://${WORKSPACE} \
+                    --dockerfile=${WORKSPACE}/deploy/Dockerfile \
+                    --destination=${HARBOR_URL}/${IMAGE_NAME}:${BUILD_NUMBER} \
+                    --destination=${HARBOR_URL}/${IMAGE_NAME}:latest \
+                    --insecure \
+                    --insecure-registry=${HARBOR_URL} \
+                    --skip-tls-verify
+                    """
+                }
+            }
         }
-      }
     }
 
     stage('Update Manifest') {
