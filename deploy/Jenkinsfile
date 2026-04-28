@@ -89,7 +89,7 @@ pipeline {
               cd ${WORKSPACE}
               git config --global --add safe.directory ${WORKSPACE}
 
-              # 2. Git 설정 (따옴표 안의 변수는 \ 없이 사용)
+              # 2. Git 설정
               git config user.email "fullofnull@gmail.com"
               git config user.name "fullofnull"
 
