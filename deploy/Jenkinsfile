@@ -1,15 +1,90 @@
-stage('Image Build & Push') {
-  steps {
-    container('kaniko') {
-      sh """
-        /kaniko/executor \\
-          --context=dir://\${WORKSPACE} \\
-          --dockerfile=\${WORKSPACE}/deploy/Dockerfile \\
-          --destination=\${HARBOR_URL}/\${IMAGE_NAME}:\${BUILD_NUMBER} \\
-          --destination=\${HARBOR_URL}/\${IMAGE_NAME}:latest \\
-          --insecure \\
-          --skip-tls-verify
+pipeline {
+  agent {
+    kubernetes {
+      yaml """
+        apiVersion: v1
+        kind: Pod
+        spec:
+          nodeSelector:
+            usage: infra
+          containers:
+          - name: gradle
+            image: 192.168.241.101:30002/proxy-cache/gradle:9.4.1-jdk21
+            command: ['sleep', 'infinity']
+            resources:
+              requests:
+                memory: "512Mi"
+                cpu: "500m"
+              limits:
+                memory: "1Gi"
+                cpu: "1"
+          - name: kaniko
+            image: 192.168.241.101:30002/proxy-cache/martizih/kaniko:debug
+            command: ['sleep', 'infinity']
+            volumeMounts:
+            - name: harbor-creds
+              mountPath: /kaniko/.docker
+          volumes:
+          - name: harbor-creds
+            secret:
+              secretName: harbor-credentials
+              items:
+              - key: .dockerconfigjson
+                path: config.json
       """
     }
   }
-}
+
+  environment {
+    HARBOR_URL  = '192.168.241.101:30002'
+    IMAGE_NAME  = 'base/spring-app'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage('Build') {
+      steps {
+        container('gradle') {
+          sh 'gradle clean build -x test'
+        }
+      }
+    }
+
+    stage('Image Build & Push') {
+      steps {
+        container('kaniko') {
+          sh """
+            /kaniko/executor \\
+              --context=dir://\${WORKSPACE} \\
+              --dockerfile=\${WORKSPACE}/deploy/Dockerfile \\
+              --destination=\${HARBOR_URL}/\${IMAGE_NAME}:\${BUILD_NUMBER} \\
+              --destination=\${HARBOR_URL}/\${IMAGE_NAME}:latest \\
+              --insecure \\
+              --skip-tls-verify
+          """
+        }
+      }
+    }
+
+    stage('Update Manifest') {
+      steps {
+        container('gradle') {
+          withCredentials([usernamePassword(
+            credentialsId: 'github-credentials',
+            usernameVariable: 'GIT_USER',
+            passwordVariable: 'GIT_TOKEN'
+          )]) {
+            sh """
+              git config user.email "jenkins@ci.local"
+              git config user.name "Jenkins"
+              sed -i 's|image: \${HARBOR_URL}/\${IMAGE_NAME}:.*|image: \${HARBOR_URL}/\${IMAGE_NAME}:\${BUILD_NUMBER}|' deploy/deployment.yaml
+              git add deploy/deployment.yaml
+              git commit -m "ci: update image tag to \${BUILD_NUMBER}"
+              git push https://\${GIT_USER}:\${GIT_TOKEN}@github.com/fullofnull/myapp.git HEAD:main
+            """
+          }
