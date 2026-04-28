@@ -85,6 +85,8 @@ pipeline {
             passwordVariable: 'GIT_TOKEN'
           )]) {
             sh """
+              cd ${WORKSPACE}
+              
               git config user.email "fullofnull@gmail.com"
               git config user.name "fullofnull"
               sed -i 's|image: \${HARBOR_URL}/\${IMAGE_NAME}:.*|image: \${HARBOR_URL}/\${IMAGE_NAME}:\${BUILD_NUMBER}|' deploy/deployment.yaml
