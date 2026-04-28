@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
       - name: myapp
-        image: 192.168.241.101:30002/base/spring-app:latest
+        image: my-harbor.local:30002/base/spring-app:26
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
