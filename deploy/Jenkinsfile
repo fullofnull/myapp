@@ -2246,7 +2246,7 @@ groovystage('Image Build & Push') {
           --dockerfile=${WORKSPACE}/deploy/Dockerfile \
           --destination=${HARBOR_URL}/${IMAGE_NAME}:${BUILD_NUMBER} \
           --destination=${HARBOR_URL}/${IMAGE_NAME}:latest \
-          --insecure \
+          --insecure \\
           --insecure-registry=${HARBOR_URL} \\
           --skip-tls-verify
           """
