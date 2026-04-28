@@ -36,7 +36,7 @@ pipeline {
   }
 
   environment {
-    HARBOR_URL  = '192.168.241.101:30002'
+    HARBOR_URL  = 'my-harbor.local:30002'
     IMAGE_NAME  = 'base/spring-app'
   }
 
