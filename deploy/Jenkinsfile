@@ -85,14 +85,25 @@ pipeline {
             passwordVariable: 'GIT_TOKEN'
           )]) {
             sh """
+              # 1. 오타 수정 (Q 제거) 및 안전 디렉토리 설정
               cd ${WORKSPACE}
-              
+              git config --global --add safe.directory ${WORKSPACE}
+
+              # 2. Git 설정 (따옴표 안의 변수는 \ 없이 사용)
               git config user.email "fullofnull@gmail.com"
               git config user.name "fullofnull"
-              sed -i 's|image: \${HARBOR_URL}/\${IMAGE_NAME}:.*|image: \${HARBOR_URL}/\${IMAGE_NAME}:\${BUILD_NUMBER}|' deploy/deployment.yaml
+
+              # 3. sed 명령어 (이미지 태그 업데이트)
+              # 여기서 ${HARBOR_URL} 등은 젠킨스 환경변수를 그대로 사용합니다.
+              sed -i "s|image: .*/${IMAGE_NAME}:.*|image: ${HARBOR_URL}/${IMAGE_NAME}:${BUILD_NUMBER}|" deploy/deployment.yaml
+
+              # 4. 충돌 방지 및 푸시
               git add deploy/deployment.yaml
-              git commit -m "ci: update image tag to \${BUILD_NUMBER}"
-              git push https://\${GIT_USER}:\${GIT_TOKEN}@github.com/fullofnull/myapp.git HEAD:main
+              if ! git diff --cached --exit-code --quiet; then
+                git commit -m "ci: update image tag to ${BUILD_NUMBER}"
+                git pull origin main --rebase
+                git push https://${GIT_USER}:${GIT_TOKEN}@github.com/fullofnull/myapp.git HEAD:main
+              fi
             """
           }
         }
