@@ -23,7 +23,7 @@ spec:
       - name: harbor-pull-credentials
       containers:
       - name: myapp
-        image: my-harbor.local:30002/base/spring-app:latest
+        image: my-harbor.local:30002/base/spring-app:2
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
