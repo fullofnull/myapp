@@ -20,7 +20,7 @@ spec:
         app: myapp
     spec:
       imagePullSecrets:
-      - name: harbor-credentials
+      - name: harbor-pull-credentials
       containers:
       - name: myapp
         image: my-harbor.local:30002/base/spring-app:latest

@@ -5,6 +5,8 @@ pipeline {
         apiVersion: v1
         kind: Pod
         spec:
+          imagePullSecrets:
+          - name: harbor-build-credentials
           hostAliases:
           - ip: "192.168.241.101"
             hostnames:
@@ -26,12 +28,12 @@ pipeline {
             image: 192.168.241.101:30002/proxy-cache/martizih/kaniko:debug
             command: ['sleep', 'infinity']
             volumeMounts:
-            - name: harbor-creds
+            - name: harbor-build-credentials
               mountPath: /kaniko/.docker
           volumes:
-          - name: harbor-creds
+          - name: harbor-build-credentials
             secret:
-              secretName: harbor-credentials
+              secretName: harbor-build-credentials
               items:
               - key: .dockerconfigjson
                 path: config.json
@@ -84,8 +86,6 @@ pipeline {
             usernameVariable: 'GIT_USER',
             passwordVariable: 'GIT_TOKEN'
           )]) {
-            // Jenkins 환경변수(BUILD_NUMBER 등)는 큰따옴표 블록에서 미리 env로 넘기고
-            // 시크릿(GIT_TOKEN)은 작은따옴표 블록에서 쉘이 처리하도록 분리
             sh """
               cd ${WORKSPACE}
               git config --global --add safe.directory ${WORKSPACE}
@@ -96,7 +96,6 @@ pipeline {
               git diff --cached --exit-code --quiet || git commit -m "ci: update image tag to ${BUILD_NUMBER}"
               git pull origin main --rebase
             """
-            // ✅ 토큰을 사용하는 push만 작은따옴표로 분리
             sh 'git push https://$GIT_USER:$GIT_TOKEN@github.com/fullofnull/myapp.git HEAD:main'
           }
         }
@@ -106,7 +105,6 @@ pipeline {
 
   post {
     success {
-      // ✅ 이스케이프 제거
       echo "빌드 성공: ${IMAGE_NAME}:${BUILD_NUMBER}"
     }
     failure {
