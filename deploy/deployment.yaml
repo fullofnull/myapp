@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: myapp-deployment
-  namespace: myapp        # 변경됨
+  namespace: myapp
   labels:
     app: myapp
 spec:
@@ -19,9 +19,11 @@ spec:
       labels:
         app: myapp
     spec:
+      imagePullSecrets:
+      - name: harbor-credentials
       containers:
       - name: myapp
-        image: 192.168.241.101:30002/base/spring-app:latest
+        image: my-harbor.local:30002/base/spring-app:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
